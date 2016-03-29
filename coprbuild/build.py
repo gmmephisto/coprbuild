@@ -33,11 +33,20 @@ def get_endpoint():
     return COPR_ENDPOINT
 
 
+def _get_project_and_owner(name):
+    """Returns parsed project line."""
+
+    if "/" in name:
+        return name.split("/")
+    else:
+        return config.get("username"), name
+
+
 def get_project_id(name):
     """Returns project id by specified project name."""
 
     path = urljoin(get_endpoint(), "/api_2/projects")
-    owner = config.get("username")
+    owner, project_name = _get_project_and_owner(name)
     if owner:
         path += "?owner={0}".format(owner)
 
@@ -48,10 +57,10 @@ def get_project_id(name):
     projects_map = dict([(project["project"]["name"], project["project"])
                         for project in response["projects"]])
 
-    if name not in projects_map:
+    if project_name not in projects_map:
         raise Error("COPR project '{0}' not found.", name)
 
-    return projects_map[name]["id"]
+    return projects_map[project_name]["id"]
 
 
 def build(project, srpm):
