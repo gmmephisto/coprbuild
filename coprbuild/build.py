@@ -63,7 +63,20 @@ def get_project_id(name):
     return projects_map[project_name]["id"]
 
 
-def build(project, srpm):
+def get_project_chroots(project_id):
+    """Returns list of available project chroots."""
+
+    path = urljoin(get_endpoint(),
+        "/api_2/projects/{0}/chroots".format(project_id))
+    response = requests.get(path)
+    response.raise_for_status()
+    response = json.loads(response.text)
+
+    chroots = [chroot["chroot"]["name"] for chroot in response["chroots"]]
+    return chroots
+
+
+def build(project, srpm, chroots=None):
     """Builds specified SRPM."""
 
     srpm_path = os.path.abspath(os.path.expanduser(srpm))
@@ -71,10 +84,18 @@ def build(project, srpm):
         raise Error("SRPM {0} not found.", srpm)
 
     srpm_name = os.path.basename(srpm_path)
+    project_id = get_project_id(project)
+
+    chroots = chroots or []
+    project_chroots = get_project_chroots(project_id)
+    not_available = set(chroots).difference(project_chroots)
+    if not_available:
+        raise Error("Chroots '{0}' not available for project '{1}'",
+            ",".join(not_available), project)
 
     metadata = {
-        "project_id": get_project_id(project),
-        "chroots": [],
+        "project_id": project_id,
+        "chroots": chroots,
         "enable_net": False
     }
     data = {
@@ -99,6 +120,7 @@ def main_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("project", help="COPR project")
     parser.add_argument("srpm", help="SRPM file to build")
+    parser.add_argument("--chroots", nargs="*", help="List of chroots")
 
     return parser.parse_args()
 
@@ -127,4 +149,4 @@ def main():
     args = main_args()
     config.init()
 
-    build(args.project, args.srpm)
+    build(args.project, args.srpm, args.chroots)
