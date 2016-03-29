@@ -1,4 +1,7 @@
 CHANGES
 =======
 
+* Update classifiers and Makefile
+* Support for build package in specified chroots
+* Support owner/project notation in project name
 * Initial commit
